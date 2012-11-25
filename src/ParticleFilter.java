@@ -13,12 +13,12 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 public class ParticleFilter {
 
 	public static final double RELIABILITY = 0.9;
-	public static final double STANDARD_DEVIATION = 0.3;
-	public static final double MOVE_DEVIATION_FACTOR = 0.15;
+	public static final double STANDARD_DEVIATION = 0.5;
+	public static final double MOVE_DEVIATION_FACTOR = 0.25;
 	public static final NormalDistribution PRIOR = new NormalDistribution(0, STANDARD_DEVIATION);
 	public static final double[] doors = {1.0, 2.5, 5, 7};
 	
-	public static final double ZOOM_FACTOR = 20;
+	public static final double ZOOM_FACTOR = 0.3;
 	public static final int TERMINATION_LIMIT= 10000;
 	
 	private int step;
@@ -59,7 +59,6 @@ public class ParticleFilter {
 			System.out.println(normalisationQuotient);
 			for(Particle p: particles){
 				p.setWeight(p.getWeight()/normalisationQuotient);
-				System.out.println(p.getWeight());
 			}
 		}else{
 			//unknown
@@ -67,7 +66,7 @@ public class ParticleFilter {
 	}
 	
 	public double findDoorDistance(double position){
-		double minDistance = 10.0;
+		double minDistance = rangeEnd;
 		for(double doorPosition: doors){
 			double distance = Math.abs(doorPosition-position);
 			if(distance<minDistance){
@@ -90,21 +89,20 @@ public class ParticleFilter {
 			while(resampledParticles.size()*1.0/amount + startingPoint < treshold){
 				double newPosition = p.getPosition() + moveDistribution.sample();
 				int terminationCounter = 0;
-				while(newPosition > 10 || newPosition < 0){
+				while(newPosition > rangeEnd || newPosition < rangeStart){
 					if(terminationCounter < TERMINATION_LIMIT){
 						terminationCounter++;
 						newPosition = p.getPosition() + moveDistribution.sample();
 					}else{
-						if(newPosition<0){
-							newPosition = 0;
+						if(newPosition<rangeStart){
+							newPosition = rangeStart;
 						}
-						if(newPosition>10){
-							newPosition = 10;
+						if(newPosition>rangeEnd){
+							newPosition = rangeEnd;
 						}
 					}
 				}
 				resampledParticles.add(new Particle(newPosition, 1.0/amount));
-				System.out.println("New Particle: Old position: "+p.getPosition()+", new position: "+newPosition);
 			}
 			cumulativeWeights = treshold;
 		}
@@ -133,7 +131,7 @@ public class ParticleFilter {
 			}
 			for (Particle p : particles) {
 				int position = (int) Math.floor(p.getPosition() * 100);
-				for (int i = 0; i <= p.getWeight() * 100*ZOOM_FACTOR; i++) {
+				for (int i = 0; i <= p.getWeight() *100*ZOOM_FACTOR*amount; i++) {
 					img.setRGB(position, 100 - i, Color.BLACK.getRGB());
 				}
 			}
