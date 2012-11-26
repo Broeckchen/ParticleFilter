@@ -1,10 +1,22 @@
 import org.apache.commons.math3.distribution.NormalDistribution;
 
+/*
+ * This class is used for the discrete Bayes filter
+ * implementation. We have implemented the sensor
+ * and motion model for a robot that moves in a corridor.
+ * We consider only one-dimension movement.
+ */
+
 public class DiscreteBayesFilter {
+	
+	public static final double RELIABILITY = 0.9;	// Our sensor is reliable by 90% for detecting a job
+	public static final double STANDARD_DEVIATION = 0.5;	// The sensor model deviation
+	public static final double MOVE_DEVIATION_FACTOR = 0.25;	// The motion model deviation
 	
 	private double[] sensorBelief;
 	private double[] motionBelief;
-	private static final NormalDistribution probability = new NormalDistribution(0, 0.5);
+	private NormalDistribution motionModelProbability;	// Motion model probability function
+	private static final NormalDistribution sensorModelProbability = new NormalDistribution(0, STANDARD_DEVIATION); // Sensor model probability function
 	
 	public DiscreteBayesFilter(int cells) {
 
@@ -16,67 +28,57 @@ public class DiscreteBayesFilter {
 		}
 	}
 
-	
-	public double[] bayesFilter(int[] doors, double[] oldBelief,boolean doorFound, boolean action, double move){
+	/*
+	 * This function computes the discrete Bayes filter
+	 * for sensor and motion model. As input we give the
+	 * doors positions, the previous probability of the 
+	 * robot position, a boolean flag if a door is detected
+	 * we give true as input. Also we give as input if an
+	 * action is taken place and the movement of the robot
+	 * in meters. The move attribute is positive if robot moves
+	 * to the right, negative otherwise.
+	 */
+	public double[] bayesFilter(int[] doors, double[] oldBelief, boolean doorFound, boolean action, double move){
 		
 		double h=0;
-		
-		int cells = sensorBelief.length;
-		
+		int cells = sensorBelief.length;	
 		double[] newBelief = new double[cells]; 
-		for(int q=0; q<newBelief.length; q++)
+		double[] pzx = pZX(doors, cells);
+		
+		for(int q=0; q<newBelief.length; q++) // Initialize the new belief of the robot
 			newBelief[q] = 0;
-		double[] doorBelief = pZX(doors, cells);
 
-//		System.out.println();
-//		System.out.println(" Deviation Door Range "+ Integer.toString(deviationCells*2 +1));
-//		System.out.println();
-//		
-		if(!action){
-			//System.out.println("NEW belief");
-			if(doorFound){
-			
-	//			System.out.println();
-				for(int i=0; i<cells; i++){
-					newBelief[i] = oldBelief[i]*(0.9*doorBelief[i] + 0.1*(1-doorBelief[i]));
-					h+= newBelief[i];
+		if(!action){	// if no action is taken place
+			if(doorFound){	// and a door is found we apply the sensor model
+				for(int i=0; i<cells; i++){	// for computing the new belief of the robot we multiply the old belief
+					// with the sensor model. Our sensor is reliable by 90% so we multiply the pzx with 90% and
+					// the p(-z|x) probability with 0.1 in order to get the right probability of pzx.
+					newBelief[i] = oldBelief[i]*(RELIABILITY*pzx[i] + (1-RELIABILITY)*(1-pzx[i]));
+					h+= newBelief[i];	// update the normalization factor
 				}
 		
-				for(int i=0; i<newBelief.length; i++){
-					sensorBelief[i] = newBelief[i]/h;
-	//				System.out.print(newBelief[i]+"\t");
-				}
-	//			System.out.println();
+				for(int i=0; i<newBelief.length; i++)
+					sensorBelief[i] = newBelief[i]/h;	// normalize the new belief and we get the sensor belief
+
 				return sensorBelief;
 			}else
-				return null;
+				return null;	// no information for sensor model
 		}
-		else{
+		else{	// if an action is taken place we apply the motion model
+			// We compute the motion model regarding the MOVE_DEVIATION_FACTOR
+			motionModelProbability = new NormalDistribution(0, MOVE_DEVIATION_FACTOR*move);
 			motionBelief = new double[oldBelief.length]; 
-			for(int i=0; i<oldBelief.length; i++){
+			for(int i=0; i<oldBelief.length; i++){	// update the motion model belief
 				motionBelief[i] = pXUXBelief(move, i, oldBelief);
 			}
-//			h=0;
-//			System.out.println();
-//			System.out.println();
-//			System.out.println();
-//			for(int i=0; i<belief.length; i++){
-//				h+= belief[i];
-//				System.out.print(belief[i]+"\t");
-//			}
-//			System.out.println();
-//			System.out.println();
-//			for(int i=0; i<belief.length; i++){
-//				belief[i] = belief[i]/h;
-//				System.out.print(belief[i]+"\t");
-//			}
-//			System.out.println();
-//			System.out.println();
-//			System.out.println();
 			return motionBelief;
 		}
 	}
 	
+	/*
+	 * This function computes the probability of p(z|x) given
+	 * that the sensor detected a door
+	 */
 	public double[] pZX(int doors[], int cells){
 		double standardDeviation = 0.5;
 		int deviationCells = (int)(standardDeviation*10);
@@ -87,52 +89,37 @@ public class DiscreteBayesFilter {
 			prob[i] =0.0;
 		for(i =0;  i<prob.length; i++){
 			if(door<doors.length && i==doors[door]){
-				for(j=0;j<2*deviationCells+1; j++){
-						prob[i-deviationCells+j] =this.probability.density(Math.abs((j-deviationCells)*0.1));
+				for(j=0;j<2*deviationCells+1; j++){	// update all the cells in distance 0.5 meters according to the normal distribution
+						prob[i-deviationCells+j] = sensorModelProbability.density(Math.abs((j-deviationCells)*0.1));
 				}
-				door++;
+				door++;	// update for the next door
 			}
 		}
 		return prob;
 	}
 	
+	/*
+	 * This function computes the sum of P(x|u,x') for a given x and a 
+	 * move "movement" according to the previous belief of the robot
+	 */
 	public double pXUXBelief(double movement, int x, double[] belief){
 		
-//		System.out.println();
-//
-//		System.out.println("To belief pou pairnw");
-//		for(int i=0; i<belief.length; i++)
-//		System.out.print(belief[i]+"\t");
-//
-//		System.out.println();
-//
-//		System.out.println();
-//		
-//		System.out.println();
-		
-		int standardDeviation = (int) (2.5*movement);
-		int oldX = (int) (x-(movement*10));
+		int standardDeviation = (int) (MOVE_DEVIATION_FACTOR*movement*10);
+		int oldX = (int) (x-(movement*10));	// the x in the previous state
 		double bel =0.0;
 		int min = oldX-standardDeviation;
 		int max = oldX+standardDeviation;
+		
 		if(max<0 ||min>belief.length ){
-		//	System.out.println("Ektos oriwn");
 			return 0;
 		}
-		//System.out.println();
-		//System.out.println("Gia x "+x +" kai palio X " +oldX);
 		for(int i=0; i<belief.length; i++){
-
-			if(i>=min && i<=max){
-				
-				bel +=this.probability.density((oldX-i)*0.1)*belief[i];
-//				System.out.println("upologizw gia i "+i+ " belief ");
-//				System.out.println(Double.toString((Math.pow(Math.sqrt(2*Math.PI)*0.5 ,-1)*Math.exp(-Math.pow(oldX-i,2)*2))*belief[i]));
-
+			if(i>=min && i<=max){	// we sum the probabilities for everu cell that
+				// belongs to the space determined by the previous position and the 
+				// deviation of the move. We apply a normal distribution 
+				bel += motionModelProbability.density((oldX-i)*0.1)*belief[i];
 			}
 		}
-		
-		//System.out.println("Belief " +Double.toString(bel));
 		return bel;
 	}
 }
