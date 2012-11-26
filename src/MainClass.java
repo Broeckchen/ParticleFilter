@@ -14,7 +14,7 @@ import com.lowagie.text.Font;
 public class MainClass {
 
 	public static void main(String[] args) {
-		
+
 		MainClass main = new MainClass();
 
 		// Run Particle Filter
@@ -25,64 +25,44 @@ public class MainClass {
 		pf.saveVisualisation();
 		pf.moveStep(2.0);
 		pf.saveVisualisation();
-		//		
-		//		pf.initialize(0, 10, 7000);
-		//		pf.saveVisualisation();
-		//		pf.sensorStep(true);
-		//		pf.saveVisualisation();
 
-		//		pf.initialize(0.0, 10.0, 100);
-		//		pf.saveVisualisation();
-		//		pf.sensorStep(true);
-		//		pf.saveVisualisation();
-		//		pf.moveStep(2.5);
-		//		pf.saveVisualisation();
-		//		pf.sensorStep(true);
-		//		pf.saveVisualisation();
-		//		pf.moveStep(-2.5);
-		//		pf.saveVisualisation();
-		//		pf.sensorStep(true);
-		//		pf.saveVisualisation();
-		//		pf.moveStep(4.5);
-		//		pf.saveVisualisation();
-		//		pf.sensorStep(true);
-		//		pf.saveVisualisation();
-	
 		// Run Bayes Filter
 		double[] corridor = new double[100];
 
-		for(int i=0; i<corridor.length; i++)
+		for (int i = 0; i < corridor.length; i++)
 			corridor[i] = 0.01;
 
 		int[] doors = new int[4];
-		doors[0] = (int) (1.0*10);
-		doors[1] = (int) (2.5*10);
-		doors[2] = (int) (5.0*10);
-		doors[3] = (int) (7.0*10);
+		doors[0] = (int) (1.0 * 10);
+		doors[1] = (int) (2.5 * 10);
+		doors[2] = (int) (5.0 * 10);
+		doors[3] = (int) (7.0 * 10);
 
-		DiscreteBayesFilter filter = new DiscreteBayesFilter(corridor.length); 
+		DiscreteBayesFilter filter = new DiscreteBayesFilter(corridor.length);
 		double[] belief = filter.bayesFilter(doors, corridor, true, false, 0);
 
-		double[] motionBelief = filter.bayesFilter(doors, belief,false, true, 2);
-		
-		
-		// Create the chart of sensor model probability and 
+		double[] motionBelief = filter.bayesFilter(doors, belief, false, true,
+				2);
+
+		// Create the chart of sensor model probability and
 		// motion model probability
-		
+
 		XYSeries series1 = new XYSeries("Discrete Bayes Filter");
 
-		for(int i=0; i<belief.length; i++){
-			for(int j=0; j<10; j++)
-				series1.add(i*0.1+j*0.01, belief[i]); // we want to present the probability as
-		}											// as probability of cells
-		
+		for (int i = 0; i < belief.length; i++) {
+			for (int j = 0; j < 10; j++)
+				series1.add(i * 0.1 + j * 0.01, belief[i]); // we want to
+															// present the
+															// probability as
+		} // as probability of cells
+
 		XYDataset dataSet1 = new XYSeriesCollection(series1);
 
 		XYSeries series2 = new XYSeries("Discrete Bayes Filter");
 
-		for(int i=0; i<motionBelief.length; i++){
-			for(int j=0; j<10; j++)
-				series2.add(i*0.1+j*0.01, motionBelief[i]);
+		for (int i = 0; i < motionBelief.length; i++) {
+			for (int j = 0; j < 10; j++)
+				series2.add(i * 0.1 + j * 0.01, motionBelief[i]);
 		}
 		XYDataset dataSet2 = new XYSeriesCollection(series2);
 
@@ -90,54 +70,60 @@ public class MainClass {
 		JFreeChart chart2 = main.plotVector(dataSet2);
 
 		try {
-			JPEG.saveToFile(chart1,"output"+File.separator+"sensorModelBayesFilter.jpeg", 800, 500, 0.9);
-			JPEG.saveToFile(chart2,"output"+File.separator+"motionModelBayesFilter.jpeg", 800, 500, 0.9);
-		} catch (FileNotFoundException e) {	
+			JPEG.saveToFile(chart1, "output" + File.separator
+					+ "sensorModelBayesFilter.jpeg", 800, 500, 0.9);
+			JPEG.saveToFile(chart2, "output" + File.separator
+					+ "motionModelBayesFilter.jpeg", 800, 500, 0.9);
+		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} 
+		}
 
 		int width = 500;
 		int height = 300;
 
-
-		ChartPanel panel1 = new ChartPanel(chart1, true, true, true, false, true);
+		ChartPanel panel1 = new ChartPanel(chart1, true, true, true, false,
+				true);
 
 		panel1.setPreferredSize(new java.awt.Dimension(width, height));
 
-		ApplicationFrame  frame1 = new ApplicationFrame("Bayes Discrete Filter Sensor Model");
+		ApplicationFrame frame1 = new ApplicationFrame(
+				"Bayes Discrete Filter Sensor Model");
 
 		frame1.setContentPane(panel1);
 
 		frame1.pack();
 
-		frame1.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width-width)/5,(Toolkit.getDefaultToolkit().getScreenSize().height-height)/5);
+		frame1.setLocation(
+				(Toolkit.getDefaultToolkit().getScreenSize().width - width) / 5,
+				(Toolkit.getDefaultToolkit().getScreenSize().height - height) / 5);
 
 		frame1.setVisible(true);
 
-
-		ChartPanel panel2 = new ChartPanel(chart2, true, true, true, false, true);
+		ChartPanel panel2 = new ChartPanel(chart2, true, true, true, false,
+				true);
 
 		panel2.setPreferredSize(new java.awt.Dimension(width, height));
 
-		ApplicationFrame  frame2 = new ApplicationFrame("Bayes Discrete Filter Motion Model");
+		ApplicationFrame frame2 = new ApplicationFrame(
+				"Bayes Discrete Filter Motion Model");
 
 		frame2.setContentPane(panel2);
 
 		frame2.pack();
 
-		frame2.setLocation(frame1.getLocation().x+5*width/4,frame1.getLocation().y);
+		frame2.setLocation(frame1.getLocation().x + 5 * width / 4,
+				frame1.getLocation().y);
 
 		frame2.setVisible(true);
 
 	}
-	
+
 	/*
-	 * This function generates the plot
-	 * of the given data set.
+	 * This function generates the plot of the given data set.
 	 */
-	public JFreeChart plotVector(XYDataset dataSet1){
+	public JFreeChart plotVector(XYDataset dataSet1) {
 
 		XYItemRenderer renderer1 = new StandardXYItemRenderer();
 
@@ -147,9 +133,10 @@ public class MainClass {
 
 		plot1.setRangeAxisLocation(AxisLocation.TOP_OR_LEFT);
 
-		java.awt.Font font =new java.awt.Font("SansSerif", Font.NORMAL, 9);
+		java.awt.Font font = new java.awt.Font("SansSerif", Font.NORMAL, 9);
 
-		XYTextAnnotation annotation = new XYTextAnnotation("Hello!", 50.0, 10000.0);
+		XYTextAnnotation annotation = new XYTextAnnotation("Hello!", 50.0,
+				10000.0);
 
 		annotation.setFont(font);
 
@@ -160,6 +147,7 @@ public class MainClass {
 		plot.add(plot1);
 		plot.setOrientation(PlotOrientation.VERTICAL);
 
-		return new JFreeChart("Probability Density Function", JFreeChart.DEFAULT_TITLE_FONT, plot, true);
+		return new JFreeChart("Probability Density Function",
+				JFreeChart.DEFAULT_TITLE_FONT, plot, true);
 	}
 }
